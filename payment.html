@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title id="pageTitle">Payment</title>
+  <style>
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f0f0;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: background 0.5s ease;
+      font-size: 18px;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1, h3, label {
+      color: #323232;
+    }
+    /* Container for content */
+    .container {
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+      max-width: 500px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    input, select, textarea, button {
+      font-size: 18px;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 100%;
+      display: block;
+    }
+
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .comment {
+      background: #e6e6e6;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      word-wrap: break-word;
+    }
+    .comment small {
+      color: #666;
+    }
+    #output {
+      font-weight: bold;
+      margin-top: 20px;
+      font-size: 22px;
+      word-wrap: break-word;
+    }
+    #loadingScreen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 9999;
+    }
+    .dot {
+      height: 20px;
+      width: 20px;
+      margin: 5px;
+      background-color: #3498db;
+      border-radius: 50%;
+      display: inline-block;
+      animation: bounce 1.2s infinite ease-in-out both;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    ul {
+      padding-left: 20px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      .container {
+        max-width: 90vw;
+        padding: 15px;
+      }
+      body {
+        font-size: 16px;
+        padding: 15px;
+      }
+    }
+    @media (min-width: 769px) and (max-width: 1024px) {
+      /* iPad size */
+      .container {
+        max-width: 600px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 id="mainTitle">Payment</h1>
+
+  <div id="loginSection" class="container">
+    <label>Username:</label>
+    <input type="text" id="username" placeholder="Masukkan username" autocomplete="off" />
+    <label>Password:</label>
+    <input type="password" id="password" placeholder="Masukkan password" autocomplete="off" />
+    <button onclick="login()">Login</button>
+    <hr />
+    <h3>Daftar User Baru</h3>
+    <label>Username baru:</label>
+    <input type="text" id="registerUsername" placeholder="Masukkan username baru" autocomplete="off" />
+    <label>Password baru:</label>
+    <input type="password" id="registerPassword" placeholder="Masukkan password baru" autocomplete="off" />
+    <button onclick="registerUser()">Daftar</button>
+  </div>
+
+  <div id="paymentSection" class="container" style="display:none;">
+    <button onclick="showInfo('Dana')">Dana</button>
+    <button onclick="showInfo('Gopay')">Gopay</button>
+    <button onclick="showInfo('Qris')">Qris</button>
+    <div id="output"></div>
+
+    <h3>Komentar</h3>
+    <textarea id="commentInput" placeholder="Tulis komentar..."></textarea>
+    <button onclick="submitComment()">Kirim</button>
+    <div id="comments"></div>
+  </div>
+
+  <div id="adminPanel" class="container" style="display:none;">
+    <h3>Panel Admin</h3>
+    <label>Ubah teks tombol:</label>
+    <select id="editButtonSelect">
+      <option value="Dana">Dana</option>
+      <option value="Gopay">Gopay</option>
+      <option value="Qris">Qris</option>
+    </select>
+    <input type="text" id="newButtonText" placeholder="Teks baru" />
+    <button onclick="editButtonText()">Ubah</button>
+
+    <hr />
+
+    <label>Tambah User (tanpa role):</label>
+    <input type="text" id="newUsername" placeholder="Username baru" autocomplete="off" />
+    <input type="password" id="newUserPass" placeholder="Password baru" autocomplete="off" />
+    <button onclick="addUser()">Tambah User</button>
+  </div>
+
+  <div id="ownerPanel" class="container" style="display:none;">
+    <h3>Panel Owner</h3>
+
+    <label>Ubah Role Pengguna:</label>
+    <input type="text" id="targetUser" placeholder="Username" autocomplete="off" />
+    <select id="newRole">
+      <option value="user">user</option>
+      <option value="admin">admin</option>
+      <option value="owner">owner</option>
+    </select>
+    <button onclick="changeUserRole()">Ubah Role</button>
+
+    <hr />
+
+    <label>Ubah Background:</label>
+    <input type="file" id="bgPicker" accept="image/*" onchange="changeBackground(event)" />
+
+    <hr />
+
+    <label>Ubah Judul Halaman:</label>
+    <input type="text" id="newTitle" placeholder="Judul baru" />
+    <button onclick="changeTitle()">Ubah Judul</button>
+
+    <hr />
+
+    <label>Tambah User dengan Role:</label>
+    <input type="text" id="userWithRole" placeholder="Username" autocomplete="off" />
+    <input type="password" id="passWithRole" placeholder="Password" autocomplete="off" />
+    <select id="roleWithRole">
+      <option value="user">user</option>
+      <option value="admin">admin</option>
+      <option value="owner">owner</option>
+    </select>
+    <button onclick="addUserWithRole()">Tambah</button>
+
+    <hr />
+
+    <h4>Riwayat Login:</h4>
+    <ul id="loginHistory"></ul>
+  </div>
+
+  <script>
+    // Data pengguna dan tombol (dengan persistent di localStorage)
+    let currentUser = "";
+    let currentRole = "";
+
+    // Load userDB dari localStorage atau default
+    function loadUserDB() {
+      const data = localStorage.getItem("userDB");
+      if (data) return JSON.parse(data);
+      return {
+        user: { password: "user", role: "user" },
+        admin: { password: "admin", role: "admin" },
+        owner: { password: "owner", role: "owner" }
+      };
+    }
+    // Simpan userDB ke localStorage
+    function saveUserDB() {
+      localStorage.setItem("userDB", JSON.stringify(userDB));
+    }
+
+    // Load button responses dari localStorage atau default
+    function loadButtonResponses() {
+      const data = localStorage.getItem("buttonResponses");
+      if (data) return JSON.parse(data);
+      return {
+        Dana: "0882003493812",
+        Gopay: "08895668901",
+        Qris: "<img src='https://files.catbox.moe/gwkb7r.jpg' width='200' alt='QR Code' />"
+      };
+    }
+    // Simpan buttonResponses ke localStorage
+    function saveButtonResponses() {
+      localStorage.setItem("buttonResponses", JSON.stringify(buttonResponses));
+    }
+
+    // Load comments dari localStorage
+    function loadComments() {
+      const data = localStorage.getItem("comments");
+      if (data) return JSON.parse(data);
+      return [];
+    }
+    // Simpan comments ke localStorage
+    function saveComments() {
+      localStorage.setItem("comments", JSON.stringify(comments));
+    }
+
+    // Load background dari localStorage
+    function loadBackground() {
+      return localStorage.getItem("background") || "";
+    }
+    // Simpan background ke localStorage
+    function saveBackground(bg) {
+      localStorage.setItem("background", bg);
+    }
+
+    // Load title dari localStorage
+    function loadTitle() {
+      return localStorage.getItem("pageTitle") || "Payment";
+    }
+    // Simpan title ke localStorage
+    function saveTitle(title) {
+      localStorage.setItem("pageTitle", title);
+    }
+
+    // Load login history
+    function loadLoginHistory() {
+      const data = localStorage.getItem("loginHistory");
+      if (data) return JSON.parse(data);
+      return [];
+    }
+    // Save login history
+    function saveLoginHistory() {
+      localStorage.setItem("loginHistory", JSON.stringify(loginHistory));
+    }
+
+    // Inisialisasi data
+    let userDB = loadUserDB();
+    let buttonResponses = loadButtonResponses();
+    let comments = loadComments();
+    let loginHistory = loadLoginHistory();
+
+    // Set background dan title saat load halaman
+    const bg = loadBackground();
+    if (bg) document.body.style.backgroundImage = `url(${bg})`;
+
+    const pageTitle = loadTitle();
+    document.title = pageTitle;
+    document.getElementById("mainTitle").textContent = pageTitle;
+
+    // Fungsi login
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      if (!username || !password) {
+        alert("Isi username dan password!");
+        return;
+      }
+      if (!userDB[username]) {
+        alert("User tidak ditemukan.");
+        return;
+      }
+      if (userDB[username].password !== password) {
+        alert("Password salah.");
+        return;
+      }
+      currentUser = username;
+      currentRole = userDB[username].role;
+      saveLoginHistoryEntry(username);
+      setupAfterLogin();
+    }
+
+    // Fungsi daftar user
+    function registerUser() {
+      const username = document.getElementById("registerUsername").value.trim();
+      const password = document.getElementById("registerPassword").value;
+      if (!username || !password) {
+        alert("Isi username dan password untuk daftar!");
+        return;
+      }
+      if (userDB[username]) {
+        alert("Username sudah ada.");
+        return;
+      }
+      userDB[username] = { password, role: "user" };
+      saveUserDB();
+      alert("Pendaftaran berhasil! Silakan login.");
+      // Reset form daftar
+      document.getElementById("registerUsername").value = "";
+      document.getElementById("registerPassword").value = "";
+    }
+
+    // Setup tampilan setelah login berhasil
+    function setupAfterLogin() {
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("paymentSection").style.display = "block";
+
+      if (currentRole === "admin" || currentRole === "owner") {
+        document.getElementById("adminPanel").style.display = "block";
+      } else {
+        document.getElementById("adminPanel").style.display = "none";
+      }
+      if (currentRole === "owner") {
+        document.getElementById("ownerPanel").style.display = "block";
+      } else {
+        document.getElementById("ownerPanel").style.display = "none";
+      }
+
+      renderComments();
+      alert(`Selamat datang, ${currentUser} (${currentRole})`);
+    }
+
+    // Fungsi menampilkan info pembayaran
+    function showInfo(method) {
+      const output = document.getElementById("output");
+      output.innerHTML = buttonResponses[method] || "Info tidak tersedia.";
+    }
+
+    // Submit komentar
+    function submitComment() {
+      const text = document.getElementById("commentInput").value.trim();
+      if (!text) {
+        alert("Komentar tidak boleh kosong.");
+        return;
+      }
+      const timestamp = new Date().toISOString();
+      comments.push({ username: currentUser, role: currentRole, text, timestamp });
+      saveComments();
+      document.getElementById("commentInput").value = "";
+      renderComments();
+    }
+
+    // Render komentar ke halaman
+    function renderComments() {
+      const container = document.getElementById("comments");
+      container.innerHTML = "";
+      comments.forEach((comment, index) => {
+        const div = document.createElement("div");
+        div.className = "comment";
+        div.id = `comment-${index}`;
+
+        let html = `<strong>${comment.username} (${comment.role})</strong> <small>${new Date(comment.timestamp).toLocaleString()}</small>`;
+        if (currentRole === "admin" || currentRole === "owner") {
+          html += ` <button onclick="startEditComment(${index})" style="font-size:12px;">Edit</button>`;
+        }
+        html += `<p id="comment-text-${index}">${escapeHtml(comment.text)}</p>`;
+        div.innerHTML = html;
+        container.appendChild(div);
+      });
+    }
+
+    // Escape HTML untuk keamanan
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, function (m) {
+        return ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[m];
+      });
+    }
+
+    // Mulai edit komentar (admin/owner saja)
+    function startEditComment(index) {
+      if (!(currentRole === "admin" || currentRole === "owner")) return;
+
+      const commentP = document.getElementById(`comment-text-${index}`);
+      const oldText = comments[index].text;
+
+      // Ganti paragraf jadi textarea dan tombol simpan + batal
+      const container = document.getElementById(`comment-${index}`);
+      container.innerHTML = `
+        <strong>${comments[index].username} (${comments[index].role})</strong> <small>${new Date(comments[index].timestamp).toLocaleString()}</small>
+        <textarea id="editCommentTextarea-${index}" style="width: 100%; height: 60px;">${escapeHtml(oldText)}</textarea>
+        <button onclick="saveEditComment(${index})">Simpan</button>
+        <button onclick="cancelEditComment(${index})">Batal</button>
+      `;
+    }
+
+    // Simpan edit komentar
+    function saveEditComment(index) {
+      const textarea = document.getElementById(`editCommentTextarea-${index}`);
+      if (!textarea) return;
+      const newText = textarea.value.trim();
+      if (!newText) {
+        alert("Komentar tidak boleh kosong.");
+        return;
+      }
+      comments[index].text = newText;
+      saveComments();
+      renderComments();
+    }
+
+    // Batalkan edit komentar
+    function cancelEditComment(index) {
+      renderComments();
+    }
+
+    // Edit teks tombol (admin/owner)
+    function editButtonText() {
+      if (!(currentRole === "admin" || currentRole === "owner")) {
+        alert("Hanya admin/owner yang bisa mengubah teks tombol.");
+        return;
+      }
+      const btnKey = document.getElementById("editButtonSelect").value;
+      const newText = document.getElementById("newButtonText").value.trim();
+      if (!newText) {
+        alert("Isi teks baru.");
+        return;
+      }
+      buttonResponses[btnKey] = newText;
+      saveButtonResponses();
+      alert("Teks tombol berhasil diubah.");
+      document.getElementById("newButtonText").value = "";
+    }
+
+    // Tambah user (admin/owner)
+    function addUser() {
+      if (!(currentRole === "admin" || currentRole === "owner")) {
+        alert("Hanya admin/owner yang bisa menambah user.");
+        return;
+      }
+      const username = document.getElementById("newUsername").value.trim();
+      const password = document.getElementById("newUserPass").value;
+      if (!username || !password) {
+        alert("Isi username dan password baru.");
+        return;
+      }
+      if (userDB[username]) {
+        alert("Username sudah ada.");
+        return;
+      }
+      userDB[username] = { password, role: "user" };
+      saveUserDB();
+      alert("User berhasil ditambahkan.");
+      document.getElementById("newUsername").value = "";
+      document.getElementById("newUserPass").value = "";
+    }
+
+    // Ganti role user (owner saja)
+    function changeUserRole() {
+      if (currentRole !== "owner") {
+        alert("Hanya owner yang bisa mengubah role.");
+        return;
+      }
+      const username = document.getElementById("targetUser").value.trim();
+      const newRole = document.getElementById("newRole").value;
+      if (!username || !newRole) {
+        alert("Isi username dan pilih role baru.");
+        return;
+      }
+      if (!userDB[username]) {
+        alert("User tidak ditemukan.");
+        return;
+      }
+      userDB[username].role = newRole;
+      saveUserDB();
+      alert(`Role user ${username} diubah menjadi ${newRole}.`);
+      document.getElementById("targetUser").value = "";
+    }
+
+    // Ubah background (owner saja)
+    function changeBackground(event) {
+      if (currentRole !== "owner") {
+        alert("Hanya owner yang bisa mengubah background.");
+        return;
+      }
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.body.style.backgroundImage = `url(${e.target.result})`;
+        saveBackground(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Ubah judul (owner saja)
+    function changeTitle() {
+      if (currentRole !== "owner") {
+        alert("Hanya owner yang bisa mengubah judul.");
+        return;
+      }
+      const newTitle = document.getElementById("newTitle").value.trim();
+      if (!newTitle) {
+        alert("Isi judul baru.");
+        return;
+      }
+      document.title = newTitle;
+      document.getElementById("mainTitle").textContent = newTitle;
+      saveTitle(newTitle);
+      alert("Judul berhasil diubah.");
+      document.getElementById("newTitle").value = "";
+    }
+
+    // Tambah user dengan role (owner saja)
+    function addUserWithRole() {
+      if (currentRole !== "owner") {
+        alert("Hanya owner yang bisa menambah user dengan role.");
+        return;
+      }
+      const username = document.getElementById("userWithRole").value.trim();
+      const password = document.getElementById("passWithRole").value;
+      const role = document.getElementById("roleWithRole").value;
+      if (!username || !password || !role) {
+        alert("Isi username, password, dan role.");
+        return;
+      }
+      if (userDB[username]) {
+        alert("Username sudah ada.");
+        return;
+      }
+      userDB[username] = { password, role };
+      saveUserDB();
+      alert("User dengan role berhasil ditambahkan.");
+      document.getElementById("userWithRole").value = "";
+      document.getElementById("passWithRole").value = "";
+    }
+
+    // Simpan riwayat login
+    function saveLoginHistoryEntry(username) {
+      const now = new Date().toISOString();
+      loginHistory.push({ username, time: now });
+      saveLoginHistory();
+      renderLoginHistory();
+    }
+
+    // Render riwayat login (owner saja)
+    function renderLoginHistory() {
+      if (currentRole !== "owner") return;
+      const ul = document.getElementById("loginHistory");
+      ul.innerHTML = "";
+      loginHistory.slice(-10).reverse().forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.username} login pada ${new Date(entry.time).toLocaleString()}`;
+        ul.appendChild(li);
+      });
+    }
+
+    // Saat load halaman, jika sudah login sebelumnya (sessionStorage)
+    function checkSession() {
+      const user = sessionStorage.getItem("currentUser");
+      if (user && userDB[user]) {
+        currentUser = user;
+        currentRole = userDB[user].role;
+        setupAfterLogin();
+        renderLoginHistory();
+      }
+    }
+    // Simpan session user
+    function saveSession() {
+      sessionStorage.setItem("currentUser", currentUser);
+    }
+
+    // Modifikasi setupAfterLogin untuk simpan session
+    const originalSetupAfterLogin = setupAfterLogin;
+    setupAfterLogin = function() {
+      originalSetupAfterLogin();
+      saveSession();
+      renderLoginHistory();
+    };
+
+    // Cek sesi saat halaman dimuat
+    window.onload = () => {
+      checkSession();
+    };
+  </script>
+</body>
+</html>
